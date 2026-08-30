@@ -54,6 +54,12 @@ export default function App() {
     trackFacebookEvent('PageView');
 
     const handleLocationChange = () => {
+      // If user arrives via legacy hash /#admin or #admin, rewrite URL to /admin cleanly
+      if (window.location.hash.includes('admin')) {
+        window.history.replaceState(null, '', '/admin');
+        setActiveTab('dashboard');
+        return;
+      }
       const path = window.location.pathname;
       if (path === '/admin' || path.startsWith('/admin')) {
         setActiveTab('dashboard');
@@ -136,6 +142,7 @@ export default function App() {
         setActiveTab={navigateTo}
         onSpinClick={scrollToLuckyClock}
         onBookClick={scrollToBookingForm}
+        onAdminClick={() => navigateTo('dashboard')}
       />
 
       {/* Dynamic View Routing */}

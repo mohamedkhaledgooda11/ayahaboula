@@ -285,73 +285,53 @@ export const OrderForm: React.FC<OrderFormProps> = ({
               ></textarea>
             </div>
 
-            {/* Hair Color Shade Selection Inside Form */}
-            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-4 sm:p-6">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-xl bg-[#FF6600]/10 text-[#FF6600] flex items-center justify-center font-bold shrink-0">
-                  <Palette className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-black text-slate-900">
-                    اختاري درجة الصبغة المفضلة (لون واحد مشمول في العرض)
-                  </h4>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    يمكنكِ تحديد اللون الآن أو استشارة أخصائية الصبغة عند زيارة الفرع
-                  </p>
-                </div>
+            {/* Order Summary & Customization Box */}
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h4 className="text-sm sm:text-base font-black text-slate-900">
+                  ملخص حجزكِ وتفاصيل الحساب
+                </h4>
+                <span className="text-xs font-black bg-[#FF6600]/10 text-[#FF6600] px-3 py-1 rounded-full">
+                  {selectedPackage.name}
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-3">
-                {SHADE_OPTIONS.map((shade: ShadeOption) => {
-                  const isSelected = selectedShade === shade.name;
-                  return (
-                    <div
-                      key={shade.id}
-                      id={`form-shade-${shade.id}`}
-                      onClick={() => onSelectShade(shade.name)}
-                      className={`p-2.5 sm:p-3 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${
-                        isSelected
-                          ? 'border-[#FF6600] bg-white text-slate-900 shadow-md shadow-[#FF6600]/15 ring-2 ring-[#FF6600]/20'
-                          : 'border-slate-200 bg-white hover:border-[#FF6600]/50 text-slate-700'
-                      }`}
-                    >
-                      <span
-                        className="w-5 h-5 rounded-full border border-slate-300 shadow-inner shrink-0"
-                        style={{ backgroundColor: shade.colorHex || '#FF6600' }}
-                      />
-                      <div className="overflow-hidden min-w-0 flex-1">
-                        <div className="text-[11px] sm:text-xs font-bold truncate text-slate-900">{shade.name}</div>
-                        <div className="text-[9px] sm:text-[10px] text-slate-500 truncate">{shade.category}</div>
-                      </div>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[#FF6600] mr-auto shrink-0 stroke-[3]" />}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Hair Wash Add-on Option Inside Form */}
-            <div className="bg-white border-2 border-slate-200 hover:border-[#FF6600]/50 rounded-3xl p-4 sm:p-5 shadow-xs transition-all">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                <div className="flex items-start sm:items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#FF6600]/10 text-[#FF6600] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                    <Droplets className="w-5 h-5" />
-                  </div>
+              {/* Quick Shade Selection/Confirmation */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Palette className="w-4 h-4 text-[#FF6600] shrink-0" />
                   <div>
-                    <h4 className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2 flex-wrap">
-                      <span>إضافة غسيل الشعر الاحترافي قبل الجلسة</span>
-                      <span className="bg-[#FF6600]/10 text-[#FF6600] text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full">
-                        +100 جنيه
-                      </span>
-                    </h4>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      ملحوظة هامة: أي عرض يزيد 100 ج في حال الرغبة في غسيل الشعر بالشامبو المخصص داخل الصالون.
-                    </p>
+                    <span className="text-xs font-bold text-slate-800 block">درجة الصبغة المشمولة:</span>
+                    <span className="text-[11px] text-slate-500">لون واحد مشمول مجاناً بالعرض</span>
                   </div>
                 </div>
 
-                <label className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 cursor-pointer bg-slate-50 hover:bg-orange-50 border border-slate-200 px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-black text-slate-800 transition-colors shrink-0">
-                  <span className="text-xs font-black text-slate-900">إضافة غسيل الشعر (+100 ج)</span>
+                <select
+                  id="form-select-shade"
+                  value={selectedShade || 'تحديد الدرجة بالفرع مع الخبيرة'}
+                  onChange={(e) => onSelectShade(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#FF6600]"
+                >
+                  <option value="تحديد الدرجة بالفرع مع الخبيرة">تحديد الدرجة بالفرع مع الخبيرة</option>
+                  {SHADE_OPTIONS.map((shade: ShadeOption) => (
+                    <option key={shade.id} value={shade.name}>
+                      {shade.name} ({shade.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Clean Hair Wash Add-on Toggle */}
+              <label className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-slate-200 cursor-pointer hover:border-[#FF6600]/40 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <Droplets className="w-4 h-4 text-[#FF6600] shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">إضافة غسيل شعر احترافي بالشامبو بالصالون</span>
+                    <span className="text-[10px] text-slate-500">موصى به لتجهيز ونظافة ألياف الشعر قبل الجلسة</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-[#FF6600] bg-[#FF6600]/10 px-2 py-0.5 rounded-full">+100 ج</span>
                   <input
                     id="checkbox-hair-wash-form"
                     type="checkbox"
@@ -359,26 +339,13 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                     onChange={(e) => onToggleHairWash(e.target.checked)}
                     className="w-4 h-4 accent-[#FF6600] rounded cursor-pointer"
                   />
-                </label>
-              </div>
-            </div>
+                </div>
+              </label>
 
-            {/* African Hair Disclaimer Notice Inside Form */}
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 flex items-center gap-2.5 text-[11px] sm:text-xs text-amber-950 font-semibold shadow-xs">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>تنبيه وإخلاء مسؤولية: <strong>الشعر الإفريقي خارج هذا العرض</strong>، ويتم تحديد سعره بعد المعاينة المباشرة بالفرع.</span>
-            </div>
-
-            {/* Order Summary & Calculation Box */}
-            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 sm:p-6">
-              <h4 className="text-xs sm:text-sm font-black text-slate-900 mb-3 flex items-center justify-between">
-                <span>ملخص الحساب والحجز:</span>
-                <span className="text-[#FF6600] font-black text-xs">{selectedPackage.name}</span>
-              </h4>
-
-              <div className="space-y-2 text-xs sm:text-sm text-slate-600 border-b border-slate-200 pb-3">
+              {/* Price Breakdown */}
+              <div className="space-y-2 text-xs sm:text-sm text-slate-600 border-t border-slate-200 pt-3">
                 <div className="flex justify-between">
-                  <span>سعر الباقة الأساسي:</span>
+                  <span>سعر الباقة الأساسي ({selectedPackage.name}):</span>
                   <span className="font-bold text-slate-900">{selectedPackage.price} {settings.currency}</span>
                 </div>
                 {addHairWash && (
@@ -389,7 +356,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                 )}
                 {selectedShade && (
                   <div className="flex justify-between">
-                    <span>درجة الصبغة:</span>
+                    <span>درجة الصبغة المحددة:</span>
                     <span className="font-bold text-slate-800">{selectedShade}</span>
                   </div>
                 )}
@@ -401,17 +368,18 @@ export const OrderForm: React.FC<OrderFormProps> = ({
                 )}
               </div>
 
-              <div className="pt-3 space-y-2 text-xs sm:text-sm">
+              {/* Totals and Deposit */}
+              <div className="pt-2 space-y-2 text-xs sm:text-sm border-t border-slate-200">
                 <div className="flex justify-between font-black text-sm sm:text-base text-slate-900">
                   <span>الإجمالي الكلي:</span>
                   <span className="text-[#FF6600] text-xl font-mono">{totalPrice} {settings.currency}</span>
                 </div>
                 <div className="flex justify-between font-black text-slate-800 bg-[#FF6600]/10 p-3 rounded-2xl border border-[#FF6600]/20">
-                  <span>مطلوب تحويل عربون إنستاباي:</span>
+                  <span>مطلوب تحويل عربون لتأكيد الحجز:</span>
                   <span className="text-[#FF6600] font-mono text-base">{depositAmount} {settings.currency}</span>
                 </div>
                 <div className="flex justify-between text-emerald-700 font-bold">
-                  <span>المبلغ المتبقي للدفع بالفرع:</span>
+                  <span>المبلغ المتبقي للدفع بالفرع يوم الجلسة:</span>
                   <span className="font-mono">{remainingAmount} {settings.currency}</span>
                 </div>
               </div>

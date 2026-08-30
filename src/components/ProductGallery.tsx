@@ -64,17 +64,17 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
         <div className="text-center max-w-2xl mx-auto mb-8">
           <div className="inline-flex items-center gap-1.5 bg-[#FF6600]/10 text-[#FF6600] border border-[#FF6600]/20 px-3.5 py-1 rounded-full text-xs font-black mb-3">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>معاينة حية وفيديوهات النتائج الواقعية</span>
+            <span>معاينة حية من داخل الصالون 📹</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">
-            شاهدي نتائج الجلسات على الطبيعة 📹✨
+            شاهدي تفاصيل جلسات العرض على الطبيعة ✨
           </h2>
           <p className="text-sm text-slate-600 mt-2 font-medium">
-            فيديوهات حقيقية من داخل صالون آية هبولة توضح نعومة ولمعان وترميم الشعر لكل باقة
+            تصوير حقيقي من داخل صالون آية هبولة يوضح جلسات الكافيار وترتمنت الأرجان مع الصبغة
           </p>
         </div>
 
-        {/* Media Selector Tabs - Fully Synchronized with Package Selection */}
+        {/* Media Selector Tabs - Synchronized with Package Selection */}
         <div className="flex justify-center gap-2.5 mb-8">
           <button
             id="tab-video-1"
@@ -87,7 +87,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
             }`}
           >
             <Video className="w-4 h-4" />
-            <span>فيديو العرض 1 (الكافيار 500 ج)</span>
+            <span>العرض 1: باقة الكافيار (500 ج)</span>
           </button>
 
           <button
@@ -101,7 +101,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
             }`}
           >
             <Video className="w-4 h-4" />
-            <span>فيديو العرض 2 (ترتمنت الأرجان 999 ج)</span>
+            <span>العرض 2: باقة ترتمنت الأرجان (999 ج)</span>
           </button>
         </div>
 
@@ -117,7 +117,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                   <span className="text-[11px] font-black text-slate-200">
-                    {activeMediaTab === 'video1' ? 'نتيجة باقة الكافيار' : 'نتيجة ترتمنت الأرجان'}
+                    {activeMediaTab === 'video1' ? 'باقة الكافيار والصبغة الملكية' : 'باقة ترتمنت الأرجان والصبغة الذهبية'}
                   </span>
                 </div>
 
@@ -199,15 +199,15 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
             </div>
           </div>
 
-          {/* Quick Package Card linked to the Active Video & Synchronized */}
+          {/* Session Overview Card beside Video */}
           <div className="md:col-span-6 bg-slate-900 text-white border-2 border-[#FF6600] rounded-3xl p-6 sm:p-7 text-right flex flex-col justify-between shadow-2xl">
             <div>
               <div className="flex items-center justify-between gap-2 mb-3">
                 <span className="inline-block bg-[#FF6600] text-white text-xs font-black px-3.5 py-1 rounded-full shadow-sm">
-                  {currentPkg.badge || (activeMediaTab === 'video1' ? 'العرض 1 - الأكثر توفيراً 🎀' : 'العرض 2 - الأكثر طلباً ومبيعاً 🔥')}
+                  {activeMediaTab === 'video1' ? 'العرض 1 • الكافيار والصبغة 🎀' : 'العرض 2 • ترتمنت الأرجان والصبغة 🔥'}
                 </span>
                 <span className="text-[11px] text-amber-300 font-bold">
-                  فيديو حقيقي من الصالون ✓
+                  تصوير صالون آية هبولة ✓
                 </span>
               </div>
 
@@ -227,14 +227,40 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                 </span>
               </div>
 
-              <ul className="text-xs sm:text-sm text-slate-300 space-y-2.5 mb-6">
-                {currentPkg.features.map((feat, idx) => (
-                  <li key={idx} className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-[#FF6600]/20 text-[#FF6600] flex items-center justify-center font-black text-xs shrink-0">✓</span>
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="bg-slate-800/70 border border-slate-700 rounded-2xl p-4 mb-6 space-y-2.5 text-xs sm:text-sm text-slate-200">
+                <p className="font-bold text-amber-200 text-xs mb-1">✨ ما تشاهدينه في هذا الفيديو:</p>
+                {activeMediaTab === 'video1' ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>جلسة كافيار لتغذية وترميم خصلات الشعر واستعادة مرونته</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>صبغة لون واحد متجانس تمنح الشعر حيوية ولمعاناً ثابتاً</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>مجموعة العناية المنزلية (شامبو + بلسم) هدية مع الجلسة</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>فرد وترميم حريري متكامل بأقوى ترتمنت أرجان معالج</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>صبغة بروفيشنال خالية من الأمونيا تدوم طويلاً</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF6600] font-bold">✓</span>
+                      <span>مجموعة الأرجان الملكية المنزلية هدية مجانية مع الحجز</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3 pt-2">
@@ -245,7 +271,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                 className="w-full py-4 bg-[#FF6600] hover:bg-[#e65c00] text-white rounded-full text-sm sm:text-base font-black shadow-xl shadow-[#FF6600]/30 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <Zap className="w-4 h-4 fill-white" />
-                <span>تأكيد اختيار باقة ({currentPkg.price} ج) والنزول للحجز ⬇️</span>
+                <span>اختيار هذه الباقة ({currentPkg.price} ج) والانتقال للحجز ⬇️</span>
               </button>
 
               <p className="text-center text-[11px] text-slate-400 font-medium">
