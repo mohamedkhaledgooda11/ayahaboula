@@ -24,13 +24,24 @@ import {
   AlertCircle,
   Database,
   FileSpreadsheet,
-  Download
+  Download,
+  Activity,
+  Trash2
 } from 'lucide-react';
 import { Order, StoreSettings, DashboardStats } from '../types';
-import { fetchAllOrders, updateOrderStatus, calculateStats, saveLocalSettings } from '../utils/storage';
+import { 
+  fetchAllOrders, 
+  updateOrderStatus, 
+  calculateStats, 
+  saveLocalSettings,
+  saveSettingsDualEngine,
+  fetchServerSettings 
+} from '../utils/storage';
 import { printOrderReceipt, openWhatsAppConfirmation } from '../utils/orderUtils';
 import { GOOGLE_APPS_SCRIPT_FULL_CODE } from '../utils/googleAppsScriptCode';
 import { CONFIG_PHP_CODE, API_PHP_CODE, SCHEMA_SQL_CODE } from '../utils/phpBackendCode';
+import { testMetaPixelConnection, initMetaPixel, getPixelLogs, clearPixelLogs, PixelEventLog } from '../utils/pixelManager';
+import { getMetaPixelCodeSnippet } from '../utils/metaPixelSnippet';
 
 interface DashboardPageProps {
   settings: StoreSettings;
@@ -70,20 +81,54 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   // Settings form state
   const [formData, setFormData] = useState<StoreSettings>(settings);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [saveStatusMessage, setSaveStatusMessage] = useState('');
+  const [isSyncingBackend, setIsSyncingBackend] = useState(false);
 
   // Google Sheet ping state
   const [isTestingSheet, setIsTestingSheet] = useState(false);
   const [sheetTestResult, setSheetTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Meta Pixel test state & Live Logs
+  const [isTestingPixel, setIsTestingPixel] = useState(false);
+  const [pixelTestResult, setPixelTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [pixelLogs, setPixelLogs] = useState<PixelEventLog[]>(() => getPixelLogs());
+
   // Code Tab state
-  const [activeCodeFile, setActiveCodeFile] = useState<'googleSheet' | 'configPhp' | 'apiPhp' | 'schemaSql'>('googleSheet');
+  const [activeCodeFile, setActiveCodeFile] = useState<'googleSheet' | 'configPhp' | 'apiPhp' | 'schemaSql' | 'metaPixelCode'>('googleSheet');
   const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
       loadOrders();
+      refreshSettingsFromBackend();
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    const handlePixelLogUpdate = () => {
+      setPixelLogs(getPixelLogs());
+    };
+    window.addEventListener('meta_pixel_event_logged', handlePixelLogUpdate);
+    return () => {
+      window.removeEventListener('meta_pixel_event_logged', handlePixelLogUpdate);
+    };
+  }, []);
+
+  const refreshSettingsFromBackend = async () => {
+    setIsSyncingBackend(true);
+    try {
+      const serverSettings = await fetchServerSettings();
+      if (serverSettings) {
+        setFormData(serverSettings);
+        onUpdateSettings(serverSettings);
+      }
+    } catch (e) {
+      console.warn('Could not sync with backend settings', e);
+    } finally {
+      setIsSyncingBackend(false);
+    }
+  };
 
   const loadOrders = async () => {
     const fetched = await fetchAllOrders();
@@ -93,11 +138,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === 'admin' || passwordInput === (settings.adminPasswordPlainText || 'admin')) {
+    const cleanInput = passwordInput.trim();
+    const customPass = (settings.adminPasswordPlainText || '').trim();
+
+    // Accept 'admin' OR 'admin123' OR custom password configured in settings
+    if (
+      cleanInput === 'admin' ||
+      cleanInput === 'admin123' ||
+      (customPass && cleanInput === customPass)
+    ) {
       setIsAuthenticated(true);
       setAuthError('');
     } else {
-      setAuthError('كلمة المرور غير صحيحة، كلمة المرور هي: admin');
+      setAuthError('كلمة المرور غير صحيحة. كلمة المرور الافتراضية هي: admin أو admin123');
     }
   };
 
@@ -106,12 +159,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     await loadOrders();
   };
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateSettings(formData);
-    saveLocalSettings(formData);
-    setSettingsSuccess(true);
-    setTimeout(() => setSettingsSuccess(false), 3000);
+    setIsSavingSettings(true);
+    setSaveStatusMessage('');
+    try {
+      const res = await saveSettingsDualEngine(formData);
+      onUpdateSettings(res.data);
+      setFormData(res.data);
+      if (res.data.metaPixelId) {
+        initMetaPixel(res.data.metaPixelId, res.data.metaTestEventCode);
+      }
+      setSettingsSuccess(true);
+      setSaveStatusMessage(res.message || 'تم حفظ وتحديث الإعدادات بنجاح في قاعدة البيانات والباك إند والقرص الصلب!');
+      setTimeout(() => setSettingsSuccess(false), 6000);
+    } catch (err: any) {
+      setSaveStatusMessage('حدث خطأ أثناء الحفظ: ' + (err?.message || 'خطأ غير معروف'));
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   const handleTestGoogleSheet = async () => {
@@ -144,6 +210,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
+  const handleTestMetaPixel = (eventType: 'PageView' | 'Purchase' | 'Lead' = 'PageView') => {
+    setIsTestingPixel(true);
+    setPixelTestResult(null);
+    try {
+      const res = testMetaPixelConnection(formData.metaPixelId, formData.metaTestEventCode, eventType);
+      setPixelTestResult(res);
+      setPixelLogs(getPixelLogs());
+    } catch (err: any) {
+      setPixelTestResult({ success: false, message: 'خطأ: ' + err.message });
+    } finally {
+      setIsTestingPixel(false);
+    }
+  };
+
+  const handleClearLogs = () => {
+    clearPixelLogs();
+    setPixelLogs([]);
+  };
+
   // Filtered orders list
   const filteredOrders = orders.filter(order => {
     const matchesSearch =
@@ -165,6 +250,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       case 'configPhp': return CONFIG_PHP_CODE;
       case 'apiPhp': return API_PHP_CODE;
       case 'schemaSql': return SCHEMA_SQL_CODE;
+      case 'metaPixelCode': return getMetaPixelCodeSnippet(formData.metaPixelId, formData.metaTestEventCode);
     }
   };
 
@@ -180,6 +266,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     if (activeCodeFile === 'configPhp') filename = 'config.php';
     if (activeCodeFile === 'apiPhp') filename = 'api.php';
     if (activeCodeFile === 'schemaSql') filename = 'schema.sql';
+    if (activeCodeFile === 'metaPixelCode') filename = 'meta-pixel.html';
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -218,24 +305,34 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 id="admin-password-input"
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="كلمة المرور (admin)"
+                placeholder="كلمة المرور (admin أو admin123)"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 focus:border-[#FF6600] text-white rounded-2xl text-sm font-mono outline-none"
+                className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 focus:border-[#FF6600] text-white rounded-2xl text-sm font-mono outline-none text-center"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute left-3.5 top-3.5 text-slate-500 hover:text-slate-300"
+                className="absolute left-3.5 top-3.5 text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
 
+            <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-700/60 text-right">
+              <div className="text-[12px] font-bold text-slate-300 mb-1 flex items-center gap-1.5">
+                <span className="text-[#FF6600]">🔑</span>
+                <span>بيانات الدخول للوحة التحكم:</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+                يمكنك كتابة <strong className="text-[#FF6600] font-mono bg-slate-800 px-1.5 py-0.5 rounded">admin</strong> أو <strong className="text-[#FF6600] font-mono bg-slate-800 px-1.5 py-0.5 rounded">admin123</strong> للدخول مباشرة (ويمكنك تغييرها لاحقاً من تبويب الإعدادات).
+              </p>
+            </div>
+
             <button
               id="admin-login-btn"
               type="submit"
-              className="w-full py-3.5 bg-[#FF6600] hover:bg-[#e65c00] text-white font-black rounded-full text-sm shadow-xl shadow-[#FF6600]/30 active:scale-98 transition-all"
+              className="w-full py-3.5 bg-[#FF6600] hover:bg-[#e65c00] text-white font-black rounded-full text-sm shadow-xl shadow-[#FF6600]/30 active:scale-98 transition-all cursor-pointer"
             >
               تسجيل الدخول للوحة الإدارة
             </button>
@@ -523,13 +620,35 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* TAB 2: STORE SETTINGS & GOOGLE SHEET */}
         {activeTab === 'settings' && (
           <div className="max-w-3xl bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
-            <h2 className="text-xl font-black text-slate-900 mb-2">إعدادات الصالون وبوابة إنستاباي وجوجل شيت</h2>
-            <p className="text-xs text-slate-500 mb-6 font-medium">تحكم في أرقام الواتساب ومبلغ العربون ومزامنة الطلبات</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 mb-1">إعدادات الصالون وبوابة إنستاباي والميتا بيكسل</h2>
+                <p className="text-xs text-slate-500 font-medium">تحكم في أرقام الواتساب ومبلغ العربون ومعرف البيكسل والمزامنة المزدوجة</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={refreshSettingsFromBackend}
+                disabled={isSyncingBackend}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+                title="جلب آخر الإعدادات من السيرفر وقاعدة البيانات"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingBackend ? 'animate-spin text-[#FF6600]' : ''}`} />
+                <span>{isSyncingBackend ? 'جاري المزامنة...' : 'مزامنة من السيرفر'}</span>
+              </button>
+            </div>
 
             {settingsSuccess && (
               <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 mb-6">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span>تم حفظ وتحديث كافة الإعدادات بنجاح!</span>
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{saveStatusMessage || 'تم حفظ وتحديث كافة الإعدادات بنجاح في السيرفر وقاعدة البيانات والذاكرة المحلية!'}</span>
+              </div>
+            )}
+
+            {saveStatusMessage && !settingsSuccess && (
+              <div className="p-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-2xl text-xs font-bold flex items-center gap-2 mb-6">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>{saveStatusMessage}</span>
               </div>
             )}
 
@@ -601,7 +720,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     type="button"
                     onClick={handleTestGoogleSheet}
                     disabled={isTestingSheet}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-black transition-all whitespace-nowrap shadow-md shadow-emerald-600/20"
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-black transition-all whitespace-nowrap shadow-md shadow-emerald-600/20 cursor-pointer"
                   >
                     {isTestingSheet ? 'جاري الفحص...' : 'اختبار الاتصال (Ping) 🚀'}
                   </button>
@@ -614,12 +733,201 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 )}
               </div>
 
+              {/* Meta Pixel & Facebook Tracking Section */}
+              <div className="border-t border-slate-200 pt-5 mt-5">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 text-sm font-black text-slate-900">
+                    <Sparkles className="w-5 h-5 text-[#FF6600]" />
+                    <span>إعدادات فيسبوك بيكسل وتتبع الحملات الإعلانية (Meta Pixel)</span>
+                  </div>
+                  {formData.metaPixelId ? (
+                    <span className="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-3 py-0.5 rounded-full border border-emerald-300">
+                      ● بيكسل نشط: {formData.metaPixelId}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-bold bg-amber-100 text-amber-800 px-3 py-0.5 rounded-full border border-amber-300">
+                      ⚠️ لم يتم تعيين بيكسل بعد
+                    </span>
+                  )}
+                </div>
+                
+                <p className="text-[11px] text-slate-500 mb-3 font-medium leading-relaxed">
+                  أدخلي معرّف البيكسل (Pixel ID) الخاص بكِ من مدير أحداث فيسبوك (Events Manager) ليتم تتبع كافة الزيارات وإرسال حدث الشراء (Purchase) والحجز فورياً في صفحة <strong>/thankyou</strong>.
+                </p>
+
+                {/* Inputs for Pixel ID & Test Event Code */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      معرّف البيكسل (Meta Pixel ID)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="مثال: 100076153371113"
+                      value={formData.metaPixelId || ''}
+                      onChange={(e) => setFormData({ ...formData, metaPixelId: e.target.value.trim() })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold outline-none focus:border-[#FF6600]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      كود اختبار الأحداث (Test Event Code - اختياري)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="مثال: TEST12345 (من تبويب Test events)"
+                      value={formData.metaTestEventCode || ''}
+                      onChange={(e) => setFormData({ ...formData, metaTestEventCode: e.target.value.trim() })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold outline-none focus:border-[#FF6600]"
+                    />
+                  </div>
+                </div>
+
+                {/* Test Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="text-[11px] font-bold text-slate-600">اختبار إرسال حدث فوري:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleTestMetaPixel('PageView')}
+                    disabled={isTestingPixel || !formData.metaPixelId}
+                    className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-300 text-white rounded-full text-xs font-bold transition-all"
+                  >
+                    ⚡ زيارة صفحة (PageView)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTestMetaPixel('Purchase')}
+                    disabled={isTestingPixel || !formData.metaPixelId}
+                    className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-300 text-white rounded-full text-xs font-bold transition-all shadow-sm"
+                  >
+                    🛒 شراء وتأكيد (Purchase 600ج)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTestMetaPixel('Lead')}
+                    disabled={isTestingPixel || !formData.metaPixelId}
+                    className="px-3.5 py-1.5 bg-[#FF6600] hover:bg-[#e65c00] disabled:bg-slate-300 text-white rounded-full text-xs font-bold transition-all shadow-sm"
+                  >
+                    🎯 عميلة مهتمة (Lead)
+                  </button>
+                </div>
+
+                {pixelTestResult && (
+                  <div className={`mt-2 p-3 rounded-2xl text-xs font-bold ${pixelTestResult.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                    {pixelTestResult.message}
+                  </div>
+                )}
+
+                {/* Live Pixel Activity Log */}
+                <div className="mt-4 p-4 bg-slate-900 text-slate-200 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between gap-2 mb-2 border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-100">
+                      <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                      <span>سجل أحداث البيكسل المباشر (Live Meta Pixel Activity Log)</span>
+                    </div>
+                    {pixelLogs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearLogs}
+                        className="text-[10px] text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>مسح السجل</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {pixelLogs.length === 0 ? (
+                    <div className="text-[11px] text-slate-400 py-3 text-center">
+                      لم يتم تسجيل أي أحداث بيكسل بعد في هذه الجلسة. جربي الضغط على أحد أزرار الاختبار أعلاه أو فتح صفحة المتجر.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {pixelLogs.map((log) => (
+                        <div key={log.id} className="p-2 bg-slate-800/80 rounded-xl border border-slate-700/60 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
+                              log.eventName === 'Purchase' 
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : log.eventName === 'InitiateCheckout'
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}>
+                              {log.eventName}
+                            </span>
+                            <span className="font-mono text-slate-300">ID: {log.pixelId}</span>
+                            {log.params?.test_event_code && (
+                              <span className="text-[10px] text-amber-300 font-mono">[{log.params.test_event_code}]</span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {log.cairoTime}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Events Firing Map Infobox */}
+                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl">
+                  <div className="text-xs font-black text-slate-800 mb-2">الأحداث التي يتم إرسالها لفيسبوك تلقائياً:</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px] text-slate-600">
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <strong className="text-slate-900 block font-mono">1. PageView</strong>
+                      عند زيارة أي صفحة أو التبديل بين الأقسام
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <strong className="text-slate-900 block font-mono">2. InitiateCheckout</strong>
+                      عند بدء كتابة البيانات وتأكيد طلب الحجز
+                    </div>
+                    <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-300 text-emerald-900">
+                      <strong className="text-emerald-950 block font-mono font-black">3. Purchase & Lead 🎯</strong>
+                      عند فتح صفحة <strong>/thankyou</strong> مع قيمة الفاتورة وكود الحجز
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Password Setting */}
+              <div className="border-t border-slate-200 pt-5 mt-5">
+                <div className="flex items-center gap-2 text-sm font-black text-slate-900 mb-2">
+                  <Lock className="w-5 h-5 text-[#FF6600]" />
+                  <span>كلمة مرور لوحة الإدارة (Admin Password)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mb-3 font-medium leading-relaxed">
+                  كلمة المرور الحالية المستخدمة للدخول إلى هذه اللوحة. يمكنك كتابة أي كلمة مرور جديدة تفضلينها لحماية حسابك:
+                </p>
+
+                <div className="max-w-md">
+                  <input
+                    type="text"
+                    placeholder="كلمة مرور لوحة الإدارة (الافتراضي: admin أو admin123)"
+                    value={formData.adminPasswordPlainText || ''}
+                    onChange={(e) => setFormData({ ...formData, adminPasswordPlainText: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold outline-none focus:border-[#FF6600]"
+                  />
+                  <span className="text-[11px] text-slate-400 mt-1 block">
+                    * ملاحظة: تقبل اللوحة تلقائياً أيضاً: <code className="font-bold text-slate-600">admin</code> أو <code className="font-bold text-slate-600">admin123</code> لضمان عدم إغلاق اللوحة بالخطأ.
+                  </span>
+                </div>
+              </div>
+
               <div className="border-t border-slate-200 pt-5 mt-5">
                 <button
                   type="submit"
-                  className="px-7 py-3.5 bg-[#FF6600] hover:bg-[#e65c00] text-white font-black rounded-full text-xs sm:text-sm shadow-xl shadow-[#FF6600]/30 transition-all active:scale-95"
+                  disabled={isSavingSettings}
+                  className="px-7 py-3.5 bg-[#FF6600] hover:bg-[#e65c00] disabled:bg-slate-300 text-white font-black rounded-full text-xs sm:text-sm shadow-xl shadow-[#FF6600]/30 transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                 >
-                  حفظ وتطبيق كافة الإعدادات
+                  {isSavingSettings ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>جاري المزامنة والحفظ في الباك إند...</span>
+                    </>
+                  ) : (
+                    <span>حفظ ومزامنة كافة الإعدادات مع السيرفر وقاعدة البيانات 💾</span>
+                  )}
                 </button>
               </div>
 
@@ -688,6 +996,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 }`}
               >
                 schema.sql (MySQL Schema)
+              </button>
+              <button
+                onClick={() => setActiveCodeFile('metaPixelCode')}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  activeCodeFile === 'metaPixelCode' ? 'bg-[#FF6600] text-white' : 'bg-slate-100 text-slate-700'
+                }`}
+              >
+                Meta Pixel Code (كود البيكسل)
               </button>
             </div>
 

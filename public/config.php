@@ -21,8 +21,8 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 // 3. رابط شيت جوجل التلقائي (Webhook URL) للمزامنة المزدوجة (اختياري)
 define('GOOGLE_SHEET_URL', getenv('GOOGLE_SHEET_URL') ?: '');
 
-// 4. كلمة سر لوحة الإدارة الافتراضية
-define('ADMIN_PASSWORD', getenv('ADMIN_PASSWORD') ?: 'admin123');
+// 4. كلمة سر لوحة الإدارة الافتراضية (admin أو admin123)
+define('ADMIN_PASSWORD', getenv('ADMIN_PASSWORD') ?: 'admin');
 
 /**
  * دالة الاتصال الآمن بقاعدة البيانات عبر PDO

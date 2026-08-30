@@ -11,6 +11,7 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   facebookUrl: 'https://www.facebook.com/profile.php?id=100076153371113',
   googleSheetUrl: '',
   metaPixelId: '',
+  metaTestEventCode: '',
   adminPasswordPlainText: 'admin',
   currency: 'جنيه',
   daysRemainingText: 'العرض متبقي عليه 4 أيام فقط (الأربعاء، الخميس، الجمعة والسبت)'

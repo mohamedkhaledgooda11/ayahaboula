@@ -189,13 +189,6 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                 )}
               </div>
 
-              {/* Studio Player Bottom Caption */}
-              <div className="mt-3 text-center px-1">
-                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  📹 تصوير حقيقي مباشر بعد انتهاء الجلسة في بيوتي سنتر آية هبولة بدون أي فلاتر
-                </p>
-              </div>
-
             </div>
           </div>
 

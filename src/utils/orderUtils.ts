@@ -1,4 +1,5 @@
 import { Order, StoreSettings } from '../types';
+import { trackPixelEvent, trackContactWhatsApp } from './pixelManager';
 
 /**
  * Generate formatted WhatsApp message for customer order confirmation
@@ -39,6 +40,7 @@ ${order.notes ? `📝 *ملاحظات:* ${order.notes}\n` : ''}-----------------
  * Open WhatsApp with pre-filled message
  */
 export function openWhatsAppConfirmation(order: Order, settings: StoreSettings) {
+  trackContactWhatsApp(order.orderCode);
   const text = encodeURIComponent(generateWhatsAppOrderMessage(order, settings));
   const cleanPhone = settings.whatsappNumber.replace(/[^0-9]/g, '');
   const url = `https://wa.me/${cleanPhone}?text=${text}`;
@@ -49,13 +51,7 @@ export function openWhatsAppConfirmation(order: Order, settings: StoreSettings) 
  * Trigger Facebook Pixel Events safely
  */
 export function trackFacebookEvent(eventName: string, params?: Record<string, any>) {
-  if (typeof window !== 'undefined' && (window as any).fbq) {
-    try {
-      (window as any).fbq('track', eventName, params);
-    } catch (e) {
-      console.warn('Meta Pixel track error', e);
-    }
-  }
+  trackPixelEvent(eventName, params);
 }
 
 /**

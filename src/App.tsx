@@ -14,8 +14,8 @@ import { DashboardPage } from './components/DashboardPage';
 import { Footer } from './components/Footer';
 import { DEFAULT_STORE_SETTINGS, PACKAGE_OFFERS } from './data/constants';
 import { Order, StoreSettings } from './types';
-import { getLocalSettings, saveLocalSettings, submitOrderDualEngine } from './utils/storage';
-import { trackFacebookEvent } from './utils/orderUtils';
+import { getLocalSettings, saveLocalSettings, submitOrderDualEngine, getLastSavedOrder, fetchServerSettings } from './utils/storage';
+import { initMetaPixel, trackPageView } from './utils/pixelManager';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'thankyou' | 'dashboard'>('home');
@@ -28,30 +28,50 @@ export default function App() {
   const [wonPrize, setWonPrize] = useState<string>('');
   
   // Last completed order for thank you page
-  const [lastOrder, setLastOrder] = useState<Order | null>(null);
+  const [lastOrder, setLastOrder] = useState<Order | null>(() => getLastSavedOrder());
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Unified HTML5 History navigation (No #admin)
+  // Unified HTML5 History navigation (/admin, /thankyou, /)
   const navigateTo = (tab: 'home' | 'thankyou' | 'dashboard') => {
     setActiveTab(tab);
     if (tab === 'dashboard') {
       if (window.location.pathname !== '/admin') {
         window.history.pushState(null, '', '/admin');
       }
+      trackPageView('Dashboard');
+    } else if (tab === 'thankyou') {
+      if (window.location.pathname !== '/thankyou') {
+        window.history.pushState(null, '', '/thankyou');
+      }
+      trackPageView('ThankYou');
     } else if (tab === 'home') {
-      if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin')) {
+      if (window.location.pathname !== '/') {
         window.history.pushState(null, '', '/');
       }
+      trackPageView('Home');
     }
   };
 
-  // Sync settings when loaded & check for real /admin path
+  // Sync settings when loaded & check for real URL paths
   useEffect(() => {
     const saved = getLocalSettings();
     setSettings(saved);
 
-    // Initial pageview tracking
-    trackFacebookEvent('PageView');
+    // Initialize Meta Pixel with saved Pixel ID & Test Event Code
+    if (saved.metaPixelId) {
+      initMetaPixel(saved.metaPixelId, saved.metaTestEventCode);
+    }
+    trackPageView(activeTab === 'dashboard' ? 'Dashboard' : activeTab === 'thankyou' ? 'ThankYou' : 'Home');
+
+    // جلب أحدث الإعدادات المحدثة من الباك إند والسيرفر فوراً
+    fetchServerSettings().then(serverSettings => {
+      if (serverSettings) {
+        setSettings(serverSettings);
+        if (serverSettings.metaPixelId) {
+          initMetaPixel(serverSettings.metaPixelId, serverSettings.metaTestEventCode);
+        }
+      }
+    }).catch(() => {});
 
     const handleLocationChange = () => {
       // If user arrives via legacy hash /#admin or #admin, rewrite URL to /admin cleanly
@@ -63,6 +83,12 @@ export default function App() {
       const path = window.location.pathname;
       if (path === '/admin' || path.startsWith('/admin')) {
         setActiveTab('dashboard');
+      } else if (path === '/thankyou' || path.startsWith('/thankyou')) {
+        setActiveTab('thankyou');
+        if (!lastOrder) {
+          const recent = getLastSavedOrder();
+          if (recent) setLastOrder(recent);
+        }
       } else if (path === '/' || path === '') {
         setActiveTab(prev => (prev === 'dashboard' ? 'home' : prev));
       }
@@ -84,7 +110,7 @@ export default function App() {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [activeTab]);
+  }, []);
 
   const handleSelectPackageAndScroll = (packageId: string) => {
     setSelectedPackageId(packageId);
@@ -124,13 +150,13 @@ export default function App() {
     try {
       const result = await submitOrderDualEngine(newOrder, settings);
       setLastOrder(result.order);
-      setActiveTab('thankyou');
+      navigateTo('thankyou');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Error submitting order', err);
       // Fallback display
       setLastOrder(newOrder);
-      setActiveTab('thankyou');
+      navigateTo('thankyou');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
@@ -140,6 +166,9 @@ export default function App() {
   const handleUpdateSettings = (newSettings: StoreSettings) => {
     setSettings(newSettings);
     saveLocalSettings(newSettings);
+    if (newSettings.metaPixelId) {
+      initMetaPixel(newSettings.metaPixelId, newSettings.metaTestEventCode);
+    }
   };
 
   const selectedPkg = PACKAGE_OFFERS.find(p => p.id === selectedPackageId) || PACKAGE_OFFERS[0];

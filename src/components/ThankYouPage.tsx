@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, MessageCircle, Copy, Check, Printer, ArrowRight, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 import { Order, StoreSettings } from '../types';
-import { openWhatsAppConfirmation, printOrderReceipt, trackFacebookEvent } from '../utils/orderUtils';
+import { openWhatsAppConfirmation, printOrderReceipt } from '../utils/orderUtils';
+import { trackPurchase, trackPageView } from '../utils/pixelManager';
+import { getLastSavedOrder } from '../utils/storage';
 
 interface ThankYouPageProps {
   order: Order | null;
@@ -10,23 +12,31 @@ interface ThankYouPageProps {
 }
 
 export const ThankYouPage: React.FC<ThankYouPageProps> = ({
-  order,
+  order: propOrder,
   settings,
   onBackToHome
 }) => {
   const [copiedNumber, setCopiedNumber] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<Order | null>(() => propOrder || getLastSavedOrder());
 
   useEffect(() => {
-    // Fire Facebook Pixel Purchase event
-    if (order) {
-      trackFacebookEvent('Purchase', {
-        value: order.totalPrice,
-        currency: 'EGP',
-        content_name: order.packageName,
-        content_ids: [order.orderCode]
-      });
+    if (propOrder) {
+      setActiveOrder(propOrder);
+    } else if (!activeOrder) {
+      const recent = getLastSavedOrder();
+      if (recent) setActiveOrder(recent);
     }
-  }, [order]);
+  }, [propOrder]);
+
+  useEffect(() => {
+    // Fire Meta / Facebook Pixel Purchase & Lead events
+    trackPageView('ThankYouPage');
+    if (activeOrder) {
+      trackPurchase(activeOrder);
+    }
+  }, [activeOrder]);
+
+  const order = activeOrder;
 
   if (!order) {
     return (

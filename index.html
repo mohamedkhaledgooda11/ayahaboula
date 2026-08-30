@@ -3,15 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Beauty Salon Aya Haboula | أقوى عروض التجميل وساعة الحظ</title>
-    <meta name="description" content="عروض بيوتي سنتر آية هبولة الحصرية: كافيار، ترتمنت الأرجان، صبغات، ومجموعة العناية - احجزي الآن واكسبي في ساعة حظ هبولة!" />
-    <meta property="og:title" content="Beauty Salon Aya Haboula | عروض بيوتي سنتر آية هبولة" />
-    <meta property="og:description" content="عروض حصرية لمدة 4 أيام فقط في فروع الإسماعيلية والقاهرة وجسر السويس. احجزي الآن بعربون إنستاباي 150 ج!" />
+    <title>Beauty Salon Aya Haboula</title>
+    <meta name="description" content="منصة وصفحة هبوط عروض وحجوزات بيوتي سنتر آية هبولة مع ساعة الحظ الدوارة ونظام إدارة وحفظ الحجوزات المزدوج" />
+    <meta property="og:title" content="Beauty Salon Aya Haboula" />
+    <meta property="og:description" content="منصة وصفحة هبوط عروض وحجوزات بيوتي سنتر آية هبولة مع ساعة الحظ الدوارة ونظام إدارة وحفظ الحجوزات المزدوج" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      
+      // Auto-load saved pixel ID if available before React mounts
+      try {
+        var rawSettings = localStorage.getItem('beauty_salon_aya_settings');
+        if (rawSettings) {
+          var parsed = JSON.parse(rawSettings);
+          if (parsed && parsed.metaPixelId) {
+            var cleanId = parsed.metaPixelId.trim().replace(/[^0-9]/g, '');
+            if (cleanId) {
+              fbq('init', cleanId);
+              fbq('track', 'PageView');
+              window.__currentMetaPixelId = cleanId;
+            }
+          }
+        }
+      } catch(e) {}
+    </script>
+    <!-- End Meta Pixel Code -->
   </head>
   <body class="bg-slate-50 text-slate-900 font-['Cairo',sans-serif] antialiased selection:bg-[#FF6600] selection:text-white">
     <div id="root"></div>

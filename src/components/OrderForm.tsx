@@ -3,6 +3,7 @@ import { Sparkles, Phone, MapPin, User, FileText, CheckCircle2, Copy, Check, Shi
 import { StoreSettings, Order, ShadeOption } from '../types';
 import { PACKAGE_OFFERS, SALON_BRANCHES, EGYPT_GOVERNORATES, SHADE_OPTIONS } from '../data/constants';
 import { generateOrderCode, formatArabicCairoDateNow } from '../utils/dateFormatter';
+import { trackInitiateCheckout } from '../utils/pixelManager';
 
 interface OrderFormProps {
   selectedPackageId: string;
@@ -89,6 +90,7 @@ export const OrderForm: React.FC<OrderFormProps> = ({
       syncedToGoogleSheet: false
     };
 
+    trackInitiateCheckout(selectedPackage.id, selectedPackage.name, totalPrice);
     await onSubmitOrder(newOrder);
   };
 

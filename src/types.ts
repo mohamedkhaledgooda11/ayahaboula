@@ -40,6 +40,7 @@ export interface StoreSettings {
   facebookUrl: string;
   googleSheetUrl: string;
   metaPixelId: string;
+  metaTestEventCode?: string;
   adminPasswordHash?: string;
   adminPasswordPlainText?: string;
   currency: string;

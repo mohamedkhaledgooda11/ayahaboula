@@ -13,6 +13,9 @@ define('DB_NAME', getenv('DB_NAME') ?: 'beauty_salon_aya');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 
+// Admin Dashboard Password (admin أو admin123)
+define('ADMIN_PASSWORD', getenv('ADMIN_PASSWORD') ?: 'admin');
+
 function formatArabicCairoDateNow($timestamp = null) {
     $time = $timestamp ? (is_numeric($timestamp) ? $timestamp : strtotime($timestamp)) : time();
     $days = ['Sunday'=>'الأحد','Monday'=>'الإثنين','Tuesday'=>'الثلاثاء','Wednesday'=>'الأربعاء','Thursday'=>'الخميس','Friday'=>'الجمعة','Saturday'=>'السبت'];

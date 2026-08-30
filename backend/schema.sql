@@ -55,5 +55,5 @@ INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
 ('instapay_username', 'ayahaboula@instapay'),
 ('deposit_amount', '150'),
 ('google_sheet_url', ''),
-('admin_password', 'admin123')
+('admin_password', 'admin')
 ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);

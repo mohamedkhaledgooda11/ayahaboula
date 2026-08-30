@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { formatArabicCairoDateNow, generateOrderCode } from './src/utils/dateFormatter';
@@ -11,89 +12,125 @@ dotenv.config();
 
 const PORT = 3000;
 
-// In-Memory Persistence Stores
-let currentSettings: StoreSettings = {
-  ...DEFAULT_STORE_SETTINGS,
-  googleSheetUrl: process.env.GOOGLE_SHEET_URL || DEFAULT_STORE_SETTINGS.googleSheetUrl
-};
+// Persistent Storage Paths
+const DATA_DIR = path.join(process.cwd(), 'data');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
+const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
+const PIXEL_LOGS_FILE = path.join(DATA_DIR, 'pixel_logs.json');
 
-// Seed sample orders for immediate richness in dashboard
-const ordersStore: Order[] = [
-  {
-    id: 'ord-101',
-    orderCode: 'AYA-84192',
-    customerName: 'مروة عبد المنعم',
-    phone1: '01023456789',
-    phone2: '01123456780',
-    governorate: 'الإسماعيلية',
-    branch: 'فرع الإسماعيلية',
-    address: 'شارع شبين الكوم - برج الزهور',
-    packageId: 'offer-1',
-    packageName: 'باقة الكافيار والصبغة الملكية',
-    packagePrice: 500,
-    addHairWash: true,
-    hairWashPrice: 100,
-    selectedShade: 'بني شوكولاتة ملكي',
-    wonPrize: 'تركيب رموش One by One',
-    depositAmount: 150,
-    remainingAmount: 450,
-    totalPrice: 600,
-    status: 'confirmed',
-    notes: 'تم تأكيد تحويل العربون على إنستاباي بنجاح',
-    cairoFormattedDate: formatArabicCairoDateNow(),
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    syncedToGoogleSheet: true
-  },
-  {
-    id: 'ord-102',
-    orderCode: 'AYA-93214',
-    customerName: 'ياسمين الشريف',
-    phone1: '01234567891',
-    governorate: 'القاهرة',
-    branch: 'فرع القاهرة - مصر الجديدة',
-    address: 'شارع الحجاز خلف حديقة الميريلاند',
-    packageId: 'offer-2',
-    packageName: 'باقة ترتمنت الأرجان والصبغة الذهبية',
-    packagePrice: 999,
-    addHairWash: false,
-    hairWashPrice: 0,
-    selectedShade: 'عسلي ذهبي مشرق',
-    wonPrize: 'ضوافر Shein عصرية',
-    depositAmount: 150,
-    remainingAmount: 849,
-    totalPrice: 999,
-    status: 'deposit_pending',
-    notes: 'بانتظار إرسال إيصال التحويل',
-    cairoFormattedDate: formatArabicCairoDateNow(),
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    syncedToGoogleSheet: false
-  },
-  {
-    id: 'ord-103',
-    orderCode: 'AYA-71589',
-    customerName: 'سارة إبراهيم فتحي',
-    phone1: '01512345678',
-    governorate: 'القاهرة',
-    branch: 'فرع جسر السويس',
-    address: 'أول جسر السويس - عمارات الميريلاند',
-    packageId: 'offer-1',
-    packageName: 'باقة الكافيار والصبغة الملكية',
-    packagePrice: 500,
-    addHairWash: true,
-    hairWashPrice: 100,
-    selectedShade: 'كراميل وبندق دافئ',
-    wonPrize: 'تنضيف وتنعيم بشرة',
-    depositAmount: 150,
-    remainingAmount: 450,
-    totalPrice: 600,
-    status: 'completed',
-    notes: 'حضرت الجلسة واستلمت مجموعة الشامبو والبلسم الهدية',
-    cairoFormattedDate: formatArabicCairoDateNow(),
-    createdAt: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    syncedToGoogleSheet: true
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
   }
-];
+}
 
+function loadPersistedSettings(): StoreSettings {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      return { ...DEFAULT_STORE_SETTINGS, ...parsed };
+    }
+  } catch (e) {
+    console.warn('Could not read settings file, using defaults:', e);
+  }
+  return { ...DEFAULT_STORE_SETTINGS };
+}
+
+function savePersistedSettings(settings: StoreSettings) {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf8');
+    console.log(`[Backend Persistence] Settings saved to disk. Pixel ID: "${settings.metaPixelId}" | Test Code: "${settings.metaTestEventCode || ''}"`);
+  } catch (e) {
+    console.error('Could not save settings file:', e);
+  }
+}
+
+function loadPersistedOrders(): Order[] {
+  ensureDataDir();
+  try {
+    if (fs.existsSync(ORDERS_FILE)) {
+      const data = fs.readFileSync(ORDERS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not read orders file:', e);
+  }
+  return [];
+}
+
+function savePersistedOrders(orders: Order[]) {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Could not save orders file:', e);
+  }
+}
+
+// Initial In-Memory State synced with Disk
+let currentSettings: StoreSettings = loadPersistedSettings();
+let ordersStore: Order[] = loadPersistedOrders();
+
+if (ordersStore.length === 0) {
+  ordersStore = [
+    {
+      id: 'ord-101',
+      orderCode: 'AYA-84192',
+      customerName: 'مروة عبد المنعم',
+      phone1: '01023456789',
+      phone2: '01123456780',
+      governorate: 'الإسماعيلية',
+      branch: 'فرع الإسماعيلية',
+      address: 'شارع شبين الكوم - برج الزهور',
+      packageId: 'offer-1',
+      packageName: 'باقة الكافيار والصبغة الملكية',
+      packagePrice: 500,
+      addHairWash: true,
+      hairWashPrice: 100,
+      selectedShade: 'بني شوكولاتة ملكي',
+      wonPrize: 'تركيب رموش One by One',
+      depositAmount: 150,
+      remainingAmount: 450,
+      totalPrice: 600,
+      status: 'confirmed',
+      notes: 'تم تأكيد تحويل العربون على إنستاباي بنجاح',
+      cairoFormattedDate: formatArabicCairoDateNow(),
+      createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+      syncedToGoogleSheet: true
+    },
+    {
+      id: 'ord-102',
+      orderCode: 'AYA-93214',
+      customerName: 'ياسمين الشريف',
+      phone1: '01234567891',
+      governorate: 'القاهرة',
+      branch: 'فرع القاهرة - مصر الجديدة',
+      address: 'شارع الحجاز خلف حديقة الميريلاند',
+      packageId: 'offer-2',
+      packageName: 'باقة ترتمنت الأرجان والصبغة الذهبية',
+      packagePrice: 999,
+      addHairWash: false,
+      hairWashPrice: 0,
+      selectedShade: 'عسلي ذهبي مشرق',
+      wonPrize: 'ضوافر Shein عصرية',
+      depositAmount: 150,
+      remainingAmount: 849,
+      totalPrice: 999,
+      status: 'deposit_pending',
+      notes: 'بانتظار إرسال إيصال التحويل',
+      cairoFormattedDate: formatArabicCairoDateNow(),
+      createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+      syncedToGoogleSheet: false
+    }
+  ];
+  savePersistedOrders(ordersStore);
+}
 // Lazy Gemini API Client Initialization
 let genAIClient: GoogleGenAI | null = null;
 function getGeminiClient(): GoogleGenAI | null {
@@ -168,7 +205,23 @@ function calculateStats(orders: Order[]): DashboardStats {
 // Central API Request Handler (Handles both /api.php and /api routes)
 async function handleApiRequest(req: Request, res: Response) {
   const requestData = { ...req.query, ...req.body };
-  const action = (requestData.action || req.query.action || 'ping').toString();
+  let action = (requestData.action || req.query.action || '').toString();
+
+  // استنتاج نوع العملية تلقائياً من مسار الرابط إذا لم تكن محددة بالـ query أو الـ body
+  if (!action) {
+    const p = req.path.toLowerCase();
+    if (p.includes('setting')) {
+      action = req.method === 'POST' ? 'updateSettings' : 'getSettings';
+    } else if (p.includes('order')) {
+      action = req.method === 'POST' ? 'addOrder' : 'getOrders';
+    } else if (p.includes('stat')) {
+      action = 'stats';
+    } else if (p.includes('pixel')) {
+      action = 'pixelLog';
+    } else {
+      action = 'ping';
+    }
+  }
 
   switch (action) {
     case 'addOrder': {
@@ -239,10 +292,11 @@ async function handleApiRequest(req: Request, res: Response) {
       }
 
       ordersStore.unshift(newOrder);
+      savePersistedOrders(ordersStore);
 
       return res.json({
         status: 'success',
-        message: 'تم حفظ الحجز بنجاح',
+        message: 'تم حفظ الحجز بنجاح ومزامنته مع قاعدة بيانات السيرفر',
         data: {
           order: newOrder,
           orderId: newOrder.id,
@@ -276,7 +330,7 @@ async function handleApiRequest(req: Request, res: Response) {
 
       return res.json({
         status: 'success',
-        message: 'تم جلب الطلبات بنجاح',
+        message: 'تم جلب الطلبات بنجاح من السيرفر',
         data: filtered,
         timestamp: formatArabicCairoDateNow()
       });
@@ -297,6 +351,7 @@ async function handleApiRequest(req: Request, res: Response) {
       const idx = ordersStore.findIndex(o => o.id === orderId || o.orderCode === orderId);
       if (idx >= 0) {
         ordersStore[idx].status = newStatus;
+        savePersistedOrders(ordersStore);
       }
 
       return res.json({
@@ -310,23 +365,64 @@ async function handleApiRequest(req: Request, res: Response) {
     case 'getSettings': {
       return res.json({
         status: 'success',
-        message: 'تم جلب الإعدادات',
+        message: 'تم جلب الإعدادات من السيرفر بنجاح',
         data: currentSettings,
         timestamp: formatArabicCairoDateNow()
       });
     }
 
     case 'updateSettings': {
-      const newSettings = requestData.settings || requestData;
+      const incoming = requestData.settings || requestData;
+
       currentSettings = {
-        ...currentSettings,
-        ...newSettings
+        storeName: incoming.storeName || incoming.store_name || currentSettings.storeName,
+        salonOwner: incoming.salonOwner || incoming.salon_owner || currentSettings.salonOwner,
+        whatsappNumber: incoming.whatsappNumber || incoming.whatsapp_number || currentSettings.whatsappNumber,
+        whatsappDepositNumber: incoming.whatsappDepositNumber || incoming.whatsapp_deposit || incoming.whatsapp_deposit_number || currentSettings.whatsappDepositNumber,
+        instapayUsername: incoming.instapayUsername || incoming.instapay_username || currentSettings.instapayUsername,
+        depositAmount: Number(incoming.depositAmount ?? incoming.deposit_amount) || currentSettings.depositAmount,
+        hairWashPrice: Number(incoming.hairWashPrice ?? incoming.hair_wash_price) || currentSettings.hairWashPrice,
+        facebookUrl: incoming.facebookUrl || incoming.facebook_url || currentSettings.facebookUrl,
+        googleSheetUrl: (incoming.googleSheetUrl !== undefined ? incoming.googleSheetUrl : incoming.google_sheet_url) ?? currentSettings.googleSheetUrl,
+        metaPixelId: (incoming.metaPixelId !== undefined ? incoming.metaPixelId : incoming.meta_pixel_id) ?? currentSettings.metaPixelId,
+        metaTestEventCode: (incoming.metaTestEventCode !== undefined ? incoming.metaTestEventCode : incoming.meta_test_event_code) ?? (currentSettings.metaTestEventCode || ''),
+        adminPasswordPlainText: incoming.adminPasswordPlainText || incoming.admin_password || currentSettings.adminPasswordPlainText,
+        currency: incoming.currency || currentSettings.currency,
+        daysRemainingText: incoming.daysRemainingText || incoming.days_remaining_text || currentSettings.daysRemainingText
       };
+
+      savePersistedSettings(currentSettings);
+
+      console.log(`[Backend Saved & Synced] Meta Pixel ID: "${currentSettings.metaPixelId}", Test Code: "${currentSettings.metaTestEventCode}"`);
 
       return res.json({
         status: 'success',
-        message: 'تم حفظ الإعدادات بنجاح',
+        message: 'تم حفظ وتحديث الإعدادات بنجاح في السيرفر والقرص الصلب',
         data: currentSettings,
+        timestamp: formatArabicCairoDateNow()
+      });
+    }
+
+    case 'pixelLog': {
+      const logEntry = requestData;
+      console.log(`[Meta Pixel Server Log] Event: ${logEntry.eventName || 'N/A'}, Pixel ID: ${logEntry.pixelId || currentSettings.metaPixelId}, Time: ${formatArabicCairoDateNow()}`);
+      try {
+        ensureDataDir();
+        let logs: any[] = [];
+        if (fs.existsSync(PIXEL_LOGS_FILE)) {
+          logs = JSON.parse(fs.readFileSync(PIXEL_LOGS_FILE, 'utf8'));
+        }
+        logs.unshift({
+          ...logEntry,
+          serverReceivedAt: new Date().toISOString()
+        });
+        fs.writeFileSync(PIXEL_LOGS_FILE, JSON.stringify(logs.slice(0, 50), null, 2), 'utf8');
+      } catch (e) {
+        // Non-blocking
+      }
+      return res.json({
+        status: 'success',
+        message: 'Meta Pixel event logged successfully on backend',
         timestamp: formatArabicCairoDateNow()
       });
     }
@@ -434,6 +530,8 @@ async function startServer() {
   app.all('/api/orders', handleApiRequest);
   app.all('/api/settings', handleApiRequest);
   app.all('/api/stats', handleApiRequest);
+  app.all('/api/pixel-log', handleApiRequest);
+  app.all('/api/pixel-logs', handleApiRequest);
   app.all('/api/test-sheet', (req, res) => {
     req.body = { ...req.body, action: 'testGoogleSheet' };
     return handleApiRequest(req, res);

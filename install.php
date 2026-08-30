@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['run'])) {
             ('instapay_username', 'ayahaboula@instapay'),
             ('deposit_amount', '150'),
             ('google_sheet_url', ''),
-            ('admin_password', 'admin123')
+            ('admin_password', 'admin')
             ON DUPLICATE KEY UPDATE `setting_value` = VALUES(`setting_value`);";
         $pdo->exec($sqlSeed);
         $messages[] = "تم إدراج إعدادات الصالون الافتراضية وحساب إنستاباي بنجاح.";
