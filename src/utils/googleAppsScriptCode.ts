@@ -179,6 +179,116 @@ function addOrderToSheet(ss, order) {
 }
 
 /**
+ * Retrieve Orders from Sheet
+ */
+function getOrdersFromSheet(ss) {
+  var sheet = ss.getSheetByName('Orders') || ss.getSheetByName('الطلبات والحجوزات');
+  if (!sheet) return [];
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return [];
+
+  var data = sheet.getRange(2, 1, lastRow - 1, 18).getValues();
+  var orders = [];
+
+  for (var i = data.length - 1; i >= 0; i--) {
+    var row = data[i];
+    var orderCode = String(row[0] || '').trim();
+    if (!orderCode) continue;
+
+    orders.push({
+      id: 'gs-' + (i + 2),
+      orderCode: orderCode,
+      cairoFormattedDate: String(row[1] || ''),
+      customerName: String(row[2] || ''),
+      phone1: String(row[3] || ''),
+      phone2: String(row[4] || ''),
+      branch: String(row[5] || ''),
+      governorate: String(row[6] || ''),
+      address: String(row[7] || ''),
+      packageName: String(row[8] || ''),
+      packagePrice: Number(row[9]) || 500,
+      addHairWash: String(row[10] || '').indexOf('نعم') !== -1,
+      selectedShade: String(row[11] || ''),
+      wonPrize: String(row[12] || ''),
+      depositAmount: Number(row[13]) || 150,
+      remainingAmount: Number(row[14]) || 0,
+      totalPrice: Number(row[15]) || 500,
+      status: String(row[16] || 'deposit_pending'),
+      notes: String(row[17] || ''),
+      syncedToGoogleSheet: true
+    });
+  }
+  return orders;
+}
+
+/**
+ * Update Order Status in Sheet
+ */
+function updateOrderStatusInSheet(ss, orderCode, newStatus) {
+  var sheet = ss.getSheetByName('Orders') || ss.getSheetByName('الطلبات والحجوزات');
+  if (!sheet) return false;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+
+  var codes = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  for (var i = 0; i < codes.length; i++) {
+    if (String(codes[i][0]).trim() === String(orderCode).trim()) {
+      sheet.getRange(i + 2, 17).setValue(newStatus);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Get Settings from Settings Sheet
+ */
+function getSettingsFromSheet(ss) {
+  var sheet = ss.getSheetByName('Settings') || ss.getSheetByName('الإعدادات');
+  if (!sheet) return {};
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return {};
+
+  var data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  var settings = {};
+  for (var i = 0; i < data.length; i++) {
+    var key = String(data[i][0]).trim();
+    var val = data[i][1];
+    if (key) {
+      settings[key] = val;
+    }
+  }
+  return settings;
+}
+
+/**
+ * Update Settings in Settings Sheet
+ */
+function updateSettingsInSheet(ss, newSettings) {
+  var sheet = ss.getSheetByName('Settings') || ss.getSheetByName('الإعدادات');
+  if (!sheet) return {};
+
+  var keys = Object.keys(newSettings);
+  var lastRow = sheet.getLastRow();
+  var existingData = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, 1).getValues() : [];
+  var existingKeys = {};
+  for (var i = 0; i < existingData.length; i++) {
+    existingKeys[String(existingData[i][0]).trim()] = i + 2;
+  }
+
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    var val = newSettings[key];
+    if (existingKeys[key]) {
+      sheet.getRange(existingKeys[key], 2).setValue(val);
+    } else {
+      sheet.appendRow([key, val]);
+    }
+  }
+  return getSettingsFromSheet(ss);
+}
+
+/**
  * Strict Arabic Cairo Time in Google Apps Script
  */
 function formatArabicCairoDateNow() {

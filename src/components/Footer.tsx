@@ -5,10 +5,9 @@ import { SALON_BRANCHES } from '../data/constants';
 
 interface FooterProps {
   settings: StoreSettings;
-  onAdminClick: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
+export const Footer: React.FC<FooterProps> = ({ settings }) => {
   return (
     <footer id="main-footer" className="bg-slate-900 text-slate-300 pt-14 pb-24 sm:pb-14 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,22 +79,8 @@ export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
             © {new Date().getFullYear()} {settings.storeName}. جميع الحقوق محفوظة.
           </div>
 
-          <div className="flex items-center gap-4 text-slate-600 text-[11px]">
-            <span>خدمة عملاء وحجوزات صالون آية هبولة</span>
-            <span className="text-slate-700">|</span>
-            <a
-              id="footer-admin-link"
-              href="/admin"
-              onClick={(e) => {
-                e.preventDefault();
-                onAdminClick();
-              }}
-              className="text-slate-500 hover:text-amber-400 flex items-center gap-1 transition-colors cursor-pointer"
-              title="لوحة الإدارة (/admin)"
-            >
-              <Lock className="w-3 h-3 text-[#FF6600]" />
-              <span>لوحة الإدارة (/admin)</span>
-            </a>
+          <div className="flex items-center gap-2 text-slate-500 text-xs">
+            <span>صالون تجميل آية هبولة للعناية بالشعر والصبغات الملكية</span>
           </div>
         </div>
 

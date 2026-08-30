@@ -70,8 +70,21 @@ export default function App() {
 
     handleLocationChange();
     window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, []);
+
+    // Secret shortcut for store owner to access dashboard without public button: Ctrl + Shift + A
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        navigateTo(activeTab === 'dashboard' ? 'home' : 'dashboard');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeTab]);
 
   const handleSelectPackageAndScroll = (packageId: string) => {
     setSelectedPackageId(packageId);
@@ -142,7 +155,6 @@ export default function App() {
         setActiveTab={navigateTo}
         onSpinClick={scrollToLuckyClock}
         onBookClick={scrollToBookingForm}
-        onAdminClick={() => navigateTo('dashboard')}
       />
 
       {/* Dynamic View Routing */}
@@ -240,7 +252,6 @@ export default function App() {
       {/* Global Footer */}
       <Footer
         settings={settings}
-        onAdminClick={() => navigateTo('dashboard')}
       />
 
     </div>

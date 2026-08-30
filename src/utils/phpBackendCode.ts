@@ -96,6 +96,98 @@ function forwardOrderToGoogleSheet($sheetUrl, $orderData) {
     curl_close($ch);
     return $res;
 }
+
+switch ($action) {
+    case 'addOrder':
+        $order = $requestData['order'] ?? $requestData;
+        $orderCode = $order['orderCode'] ?? $order['order_code'] ?? ('AYA-' . rand(10000, 99999));
+        $cairoDate = $order['cairoFormattedDate'] ?? $order['cairo_date'] ?? formatArabicCairoDateNow();
+        $customerName = trim($order['customerName'] ?? $order['customer_name'] ?? '');
+        $phone1 = trim($order['phone1'] ?? '');
+        $phone2 = trim($order['phone2'] ?? '');
+        $governorate = trim($order['governorate'] ?? 'القاهرة');
+        $branch = trim($order['branch'] ?? 'فرع القاهرة - مصر الجديدة');
+        $address = trim($order['address'] ?? '');
+        $packageId = trim($order['packageId'] ?? $order['package_id'] ?? 'offer-1');
+        $packageName = trim($order['packageName'] ?? $order['package_name'] ?? 'باقة الكافيار والصبغة الملكية');
+        $packagePrice = floatval($order['packagePrice'] ?? $order['package_price'] ?? 500);
+        $addHairWash = !empty($order['addHairWash'] || !empty($order['add_hair_wash'])) ? 1 : 0;
+        $hairWashPrice = $addHairWash ? floatval($order['hairWashPrice'] ?? $order['hair_wash_price'] ?? 100) : 0;
+        $selectedShade = trim($order['selectedShade'] ?? $order['selected_shade'] ?? '');
+        $wonPrize = trim($order['wonPrize'] ?? $order['won_prize'] ?? '');
+        $depositAmount = floatval($order['depositAmount'] ?? $order['deposit_amount'] ?? 150);
+        $totalPrice = $packagePrice + $hairWashPrice;
+        $remainingAmount = max(0, $totalPrice - $depositAmount);
+        $notes = trim($order['notes'] ?? '');
+        $status = trim($order['status'] ?? 'deposit_pending');
+
+        if (empty($customerName) || empty($phone1)) {
+            sendJsonResponse('error', null, 'الرجاء إدخال اسم العميلة ورقم الهاتف الأساسي', 400);
+        }
+
+        $syncedToSheet = 0;
+        $sheetUrl = getenv('GOOGLE_SHEET_URL') ?: '';
+        if (!empty($sheetUrl)) {
+            $sheetRes = forwardOrderToGoogleSheet($sheetUrl, array_merge($order, [
+                'orderCode' => $orderCode,
+                'cairoFormattedDate' => $cairoDate,
+                'totalPrice' => $totalPrice,
+                'remainingAmount' => $remainingAmount
+            ]));
+            if ($sheetRes) $syncedToSheet = 1;
+        }
+
+        if ($pdo) {
+            $stmt = $pdo->prepare("INSERT INTO orders (
+                order_code, cairo_date, customer_name, phone1, phone2,
+                governorate, branch, address, package_id, package_name,
+                package_price, add_hair_wash, hair_wash_price, selected_shade,
+                won_prize, deposit_amount, remaining_amount, total_price,
+                notes, status, synced_to_sheet
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+            $stmt->execute([
+                $orderCode, $cairoDate, $customerName, $phone1, $phone2,
+                $governorate, $branch, $address, $packageId, $packageName,
+                $packagePrice, $addHairWash, $hairWashPrice, $selectedShade,
+                $wonPrize, $depositAmount, $remainingAmount, $totalPrice,
+                $notes, $status, $syncedToSheet
+            ]);
+        }
+
+        sendJsonResponse('success', [
+            'orderCode' => $orderCode,
+            'cairoDate' => $cairoDate,
+            'syncedToSheet' => (bool)$syncedToSheet
+        ], 'تم حفظ وتأكيد الحجز بنجاح');
+        break;
+
+    case 'getOrders':
+        if ($pdo) {
+            $stmt = $pdo->query("SELECT * FROM orders ORDER BY id DESC LIMIT 100");
+            $orders = $stmt->fetchAll();
+            sendJsonResponse('success', $orders, 'تم جلب الحجوزات');
+        } else {
+            sendJsonResponse('success', [], 'قاعدة البيانات غير متصلة');
+        }
+        break;
+
+    case 'updateStatus':
+        $orderCode = $requestData['orderCode'] ?? $requestData['orderId'] ?? '';
+        $newStatus = $requestData['status'] ?? '';
+        if ($pdo && !empty($orderCode) && !empty($newStatus)) {
+            $stmt = $pdo->prepare("UPDATE orders SET status = ? WHERE order_code = ?");
+            $stmt->execute([$newStatus, $orderCode]);
+            sendJsonResponse('success', ['orderCode' => $orderCode, 'status' => $newStatus], 'تم تحديث حالة الحجز');
+        }
+        sendJsonResponse('error', null, 'تعذر تحديث الحالة', 400);
+        break;
+
+    case 'ping':
+    default:
+        sendJsonResponse('success', ['server' => 'PHP Dual-Engine Backend', 'time' => formatArabicCairoDateNow()], 'API Active');
+        break;
+}
 `;
 
 export const SCHEMA_SQL_CODE = `-- ============================================================

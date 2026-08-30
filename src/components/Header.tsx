@@ -8,7 +8,6 @@ interface HeaderProps {
   setActiveTab: (tab: 'home' | 'thankyou' | 'dashboard') => void;
   onSpinClick?: () => void;
   onBookClick?: () => void;
-  onAdminClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,8 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   onSpinClick,
-  onBookClick,
-  onAdminClick
+  onBookClick
 }) => {
   return (
     <header id="main-header" className="sticky top-0 z-50 bg-[#FF6600] text-white shadow-xl">
@@ -31,19 +29,6 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 sm:gap-3 text-[11px]">
             <span className="hidden sm:inline bg-white/20 text-white font-black px-2.5 py-0.5 rounded-full">تأكيد العرض: عربون 150 ج إنستاباي</span>
             <span className="hidden sm:inline font-mono text-amber-200 font-bold">{settings.whatsappDepositNumber}</span>
-            {onAdminClick && (
-              <a
-                href="/admin"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onAdminClick();
-                }}
-                className="text-white/80 hover:text-white flex items-center gap-1 font-bold text-[10px] sm:text-[11px] bg-black/20 hover:bg-black/30 px-2 py-0.5 rounded-full transition-colors"
-                title="لوحة الإدارة (/admin)"
-              >
-                <span>لوحة الإدارة</span>
-              </a>
-            )}
           </div>
         </div>
       </div>
