@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Clock, Flame, ShieldAlert, CheckCircle2, MapPin, Gift, ArrowDown, Star, Play, Zap } from 'lucide-react';
-import { StoreSettings } from '../types';
-import { SALON_BRANCHES } from '../data/constants';
+import { Sparkles, Clock, Flame, ShieldAlert, CheckCircle2, MapPin, Gift, ArrowDown, Star, Play, Zap, Check, Tag } from 'lucide-react';
+import { StoreSettings, PackageOffer } from '../types';
+import { SALON_BRANCHES, PACKAGE_OFFERS } from '../data/constants';
 
 interface CompactHeroProps {
   settings: StoreSettings;
+  selectedPackageId: string;
+  onSelectPackage: (packageId: string) => void;
   onBookClick: () => void;
   onSpinClick: () => void;
 }
 
 export const CompactHero: React.FC<CompactHeroProps> = ({
   settings,
+  selectedPackageId,
+  onSelectPackage,
   onBookClick,
   onSpinClick
 }) => {
@@ -36,6 +40,8 @@ export const CompactHero: React.FC<CompactHeroProps> = ({
   }, []);
 
   const format2 = (n: number) => String(n).padStart(2, '0');
+  const activePkg: PackageOffer = PACKAGE_OFFERS.find(p => p.id === selectedPackageId) || PACKAGE_OFFERS[0];
+  const isOffer1 = selectedPackageId === 'offer-1';
 
   return (
     <section id="hero-section" className="relative pt-6 pb-12 sm:pt-10 sm:pb-16 bg-white overflow-hidden">
@@ -47,7 +53,7 @@ export const CompactHero: React.FC<CompactHeroProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Urgent Announcement Pill */}
-        <div className="flex justify-center mb-5">
+        <div className="flex justify-center mb-4">
           <div className="inline-flex items-center gap-2 bg-[#FF6600]/10 border border-[#FF6600]/30 text-[#FF6600] px-4 py-1.5 rounded-full text-xs sm:text-sm font-black shadow-xs">
             <Flame className="w-4 h-4 fill-[#FF6600] animate-pulse" />
             <span>عرض حصري لمدة 4 أيام فقط (الأربعاء • الخميس • الجمعة • السبت) ✨</span>
@@ -75,8 +81,115 @@ export const CompactHero: React.FC<CompactHeroProps> = ({
           </div>
         </div>
 
+        {/* Interactive Dynamic Offer Switcher - Synchronized across the entire page */}
+        <div className="max-w-2xl mx-auto mb-8 bg-slate-100 p-1.5 sm:p-2 rounded-3xl border border-slate-200 shadow-inner">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              id="hero-toggle-offer-1"
+              type="button"
+              onClick={() => onSelectPackage('offer-1')}
+              className={`py-3 px-3 sm:px-5 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 ${
+                isOffer1
+                  ? 'bg-white text-slate-900 shadow-lg border-2 border-[#FF6600] scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF6600]"></span>
+                <span>العرض 1: باقة الكافيار 🎀</span>
+              </div>
+              <span className="text-[11px] sm:text-xs font-bold text-[#FF6600] bg-[#FF6600]/10 px-2 py-0.5 rounded-full">
+                500 ج فقط
+              </span>
+            </button>
+
+            <button
+              id="hero-toggle-offer-2"
+              type="button"
+              onClick={() => onSelectPackage('offer-2')}
+              className={`py-3 px-3 sm:px-5 rounded-2xl font-black text-xs sm:text-sm transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 ${
+                !isOffer1
+                  ? 'bg-white text-slate-900 shadow-lg border-2 border-[#FF6600] scale-[1.02]'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF6600]"></span>
+                <span>العرض 2: باقة الأرجان 🔥</span>
+              </div>
+              <span className="text-[11px] sm:text-xs font-bold text-[#FF6600] bg-[#FF6600]/10 px-2 py-0.5 rounded-full">
+                999 ج فقط
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Active Offer Showcase Card with smooth transition feel */}
+        <div 
+          key={activePkg.id}
+          className="max-w-2xl mx-auto bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-6 sm:p-7 shadow-2xl border-2 border-[#FF6600] relative mb-8 transition-all duration-300 transform"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-slate-800 pb-3">
+            <div className="inline-flex items-center gap-2">
+              <span className="bg-[#FF6600] text-white text-xs font-black px-3 py-1 rounded-full shadow-sm">
+                {activePkg.badge || (isOffer1 ? 'الأكثر توفيراً 🎀' : 'الأكثر طلباً ومبيعاً 🔥')}
+              </span>
+              <span className="text-xs text-amber-300 font-bold">
+                العرض المختار حالياً ✓
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-black text-[#FF6600] font-mono">
+                {activePkg.price} {settings.currency}
+              </span>
+              <span className="text-xs text-slate-400 line-through">
+                {activePkg.originalPrice} {settings.currency}
+              </span>
+              <span className="text-[11px] bg-red-500/20 text-red-400 font-black px-2 py-0.5 rounded-full border border-red-500/30">
+                وفرتي {activePkg.discountPercent}%
+              </span>
+            </div>
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">
+            {activePkg.name}
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-300 font-medium mb-4 leading-relaxed">
+            {activePkg.shortDescription}
+          </p>
+
+          {/* Offer Features bullets */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-slate-200 mb-6 bg-slate-800/60 p-3.5 rounded-2xl border border-slate-700/60">
+            {activePkg.features.map((feat, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-[#FF6600] shrink-0 stroke-[3]" />
+                <span className="font-bold">{feat}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <button
+              onClick={onBookClick}
+              className="w-full sm:flex-1 py-3.5 px-6 rounded-full bg-[#FF6600] hover:bg-[#e65c00] text-white font-black text-sm sm:text-base shadow-lg shadow-[#FF6600]/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4 fill-white" />
+              <span>تأكيد باقة {activePkg.price} ج والنزول لبيانات الحجز</span>
+            </button>
+
+            <button
+              onClick={onSpinClick}
+              className="w-full sm:w-auto py-3.5 px-5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 font-black text-xs sm:text-sm border border-slate-700 hover:border-amber-400/50 transition-all flex items-center justify-center gap-2"
+            >
+              <Gift className="w-4 h-4 text-amber-400 animate-bounce" />
+              <span>العب ساعة الحظ أولاً 🎰</span>
+            </button>
+          </div>
+        </div>
+
         {/* Countdown Timer Box - Sleek Interface Style */}
-        <div className="max-w-md mx-auto bg-slate-900 text-white rounded-3xl p-5 shadow-xl border-2 border-[#FF6600] text-center mb-8">
+        <div className="max-w-md mx-auto bg-slate-900 text-white rounded-3xl p-5 shadow-xl border-2 border-slate-800 text-center mb-8">
           <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-amber-300 mb-3">
             <Clock className="w-4 h-4 animate-spin text-[#FF6600]" />
             <span>ينتهي العرض الخاص ويغلق الحجز خلال:</span>
@@ -109,7 +222,7 @@ export const CompactHero: React.FC<CompactHeroProps> = ({
             onClick={onBookClick}
             className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-3 px-8 sm:px-10 py-4 sm:py-5 rounded-full bg-[#FF6600] hover:bg-[#e65c00] text-white text-lg sm:text-xl font-black shadow-2xl shadow-[#FF6600]/40 hover:scale-105 active:scale-95 transition-all group"
           >
-            <span>اختاري باقتك واحجزي الآن</span>
+            <span>احجزي باقتك الآن</span>
             <ArrowDown className="w-6 h-6 group-hover:translate-y-1 transition-transform animate-bounce" />
           </button>
 

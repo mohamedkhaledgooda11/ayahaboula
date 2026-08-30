@@ -466,14 +466,42 @@ async function startServer() {
 
 قدمي إجابة باللغة العربية الودودة بلهجة مصرية مهذبة ومشجعة ومختصرة (3-4 فقرات قصيرة) مع ترشيح الباقة الأنسب ونصحها بالحجز للاستفادة من عربون 150 ج.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt
-      });
+      let responseText = '';
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: prompt
+        });
+        responseText = response.text || '';
+      } catch (err: any) {
+        console.warn('Gemini primary model quota notice, trying lightweight fallback:', err?.message);
+        try {
+          const fallbackResponse = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite',
+            contents: prompt
+          });
+          responseText = fallbackResponse.text || '';
+        } catch (fallbackErr: any) {
+          console.warn('Gemini fallback notice, using intelligent salon consultation engine:', fallbackErr?.message);
+        }
+      }
+
+      if (responseText) {
+        return res.json({
+          advice: responseText,
+          isAiGenerated: true
+        });
+      }
+
+      // Dynamic intelligent salon advice based on customer answers if quota exhausted
+      const isDamagedOrDry = (hairType && (hairType.includes('تالف') || hairType.includes('جاف') || hairType.includes('متقصف') || hairType.includes('مقصف'))) || false;
+      const fallbackAdvice = isDamagedOrDry
+        ? `أهلاً بكِ في صالون آية هبولة! بما أن شعرك يعاني من الجفاف أو التلف، نصيحة مدام آية الأولى لكِ هي "باقة ترتمنت الأرجان والصبغة الذهبية (999 ج بدل 2400 ج)". ترتمنت الأرجان المعالج سيعيد بناء وتغذية ألياف الشعر ويمنحكِ انسيابية ولمعاناً كالحرير، مع صبغة فاخرة متجانسة ومجموعة شامبو وبلسم هدية. احجزي الآن بعربون 150 ج ولفي ساعة الحظ لهدية مجانية!`
+        : `أهلاً بكِ في بيوتي سنتر آية هبولة! لتألق متكامل بلون ${desiredColor || 'أنيق ومميز'}، نرشح لكِ بقوة "باقة الكافيار والصبغة الملكية (500 ج)". جلسة الكافيار تمنح الشعر نعومة وترطيباً عميقاً قبل تطبيق الصبغة، مع هدية مجموعة العناية الكاملة وسحب فوري على ساعة حظ هبولة. احجزي موعدك الآن واضمني مكانك في العرض!`;
 
       return res.json({
-        advice: response.text || 'يسعدنا خدمتكِ في بيوتي سنتر آية هبولة!',
-        isAiGenerated: true
+        advice: fallbackAdvice,
+        isAiGenerated: false
       });
     } catch (error: any) {
       console.warn('Gemini Consultant error:', error?.message);

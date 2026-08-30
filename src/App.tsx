@@ -31,7 +31,21 @@ export default function App() {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Sync settings when loaded & check for secret #admin or ?admin
+  // Unified HTML5 History navigation (No #admin)
+  const navigateTo = (tab: 'home' | 'thankyou' | 'dashboard') => {
+    setActiveTab(tab);
+    if (tab === 'dashboard') {
+      if (window.location.pathname !== '/admin') {
+        window.history.pushState(null, '', '/admin');
+      }
+    } else if (tab === 'home') {
+      if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin')) {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  };
+
+  // Sync settings when loaded & check for real /admin path
   useEffect(() => {
     const saved = getLocalSettings();
     setSettings(saved);
@@ -39,14 +53,27 @@ export default function App() {
     // Initial pageview tracking
     trackFacebookEvent('PageView');
 
-    if (window.location.hash === '#admin' || window.location.search.includes('admin')) {
-      setActiveTab('dashboard');
-    }
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      if (path === '/admin' || path.startsWith('/admin')) {
+        setActiveTab('dashboard');
+      } else if (path === '/' || path === '') {
+        setActiveTab(prev => (prev === 'dashboard' ? 'home' : prev));
+      }
+    };
+
+    handleLocationChange();
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
   }, []);
 
-  const handleSelectPackage = (packageId: string) => {
+  const handleSelectPackageAndScroll = (packageId: string) => {
     setSelectedPackageId(packageId);
     scrollToBookingForm();
+  };
+
+  const handleSelectPackageSync = (packageId: string) => {
+    setSelectedPackageId(packageId);
   };
 
   const scrollToBookingForm = () => {
@@ -106,7 +133,7 @@ export default function App() {
       <Header
         settings={settings}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateTo}
         onSpinClick={scrollToLuckyClock}
         onBookClick={scrollToBookingForm}
       />
@@ -118,17 +145,22 @@ export default function App() {
             {/* 1. Compact Hero Section */}
             <CompactHero
               settings={settings}
+              selectedPackageId={selectedPackageId}
+              onSelectPackage={handleSelectPackageSync}
               onBookClick={scrollToBookingForm}
               onSpinClick={scrollToLuckyClock}
             />
 
             {/* 2. Interactive Video & Service Gallery */}
-            <ProductGallery onSelectPackage={handleSelectPackage} />
+            <ProductGallery 
+              selectedPackageId={selectedPackageId}
+              onSelectPackage={handleSelectPackageSync} 
+            />
 
             {/* 3. Package & Offer Selector */}
             <PackageSelector
               selectedPackageId={selectedPackageId}
-              onSelectPackage={setSelectedPackageId}
+              onSelectPackage={handleSelectPackageSync}
               addHairWash={addHairWash}
               onToggleHairWash={setAddHairWash}
               settings={settings}
@@ -180,7 +212,7 @@ export default function App() {
             order={lastOrder}
             settings={settings}
             onBackToHome={() => {
-              setActiveTab('home');
+              navigateTo('home');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           />
@@ -191,7 +223,7 @@ export default function App() {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             onBackToHome={() => {
-              setActiveTab('home');
+              navigateTo('home');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           />
@@ -201,7 +233,7 @@ export default function App() {
       {/* Global Footer */}
       <Footer
         settings={settings}
-        onAdminClick={() => setActiveTab('dashboard')}
+        onAdminClick={() => navigateTo('dashboard')}
       />
 
     </div>
