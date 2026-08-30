@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Phone, MapPin, Facebook, ShieldCheck } from 'lucide-react';
+import { Sparkles, Phone, MapPin, Facebook, ShieldCheck, Lock } from 'lucide-react';
 import { StoreSettings } from '../types';
 import { SALON_BRANCHES } from '../data/constants';
 
@@ -80,8 +80,18 @@ export const Footer: React.FC<FooterProps> = ({ settings, onAdminClick }) => {
             © {new Date().getFullYear()} {settings.storeName}. جميع الحقوق محفوظة.
           </div>
 
-          <div className="text-slate-600 text-[11px]">
+          <div className="flex items-center gap-4 text-slate-600 text-[11px]">
             <span>خدمة عملاء وحجوزات صالون آية هبولة</span>
+            <span className="text-slate-700">|</span>
+            <button
+              id="footer-admin-btn"
+              onClick={onAdminClick}
+              className="text-slate-500 hover:text-slate-300 flex items-center gap-1 transition-colors"
+              title="لوحة الإدارة (Admin فقط)"
+            >
+              <Lock className="w-3 h-3" />
+              <span>Admin فقط</span>
+            </button>
           </div>
         </div>
 

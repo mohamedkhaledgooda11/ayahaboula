@@ -8,6 +8,7 @@ export interface PackageOffer {
   features: string[];
   isPopular?: boolean;
   videoUrl?: string;
+  posterUrl?: string;
   shortDescription: string;
 }
 

@@ -200,10 +200,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white mb-1">
-            لوحة تحكم {settings.storeName}
+            لوحة تحكم الإدارة (Admin فقط)
           </h2>
           <p className="text-xs text-slate-400 mb-6 font-medium">
-            منطقة محمية - يرجى إدخال كلمة سر الإدارة
+            منطقة محمية خاصة بمسؤولي صالون آية هبولة فقط
           </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -218,7 +218,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 id="admin-password-input"
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="كلمة المرور (الافتراضية: admin123)"
+                placeholder="كلمة المرور (admin)"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="w-full px-4 py-3.5 bg-slate-900 border border-slate-700 focus:border-[#FF6600] text-white rounded-2xl text-sm font-mono outline-none"

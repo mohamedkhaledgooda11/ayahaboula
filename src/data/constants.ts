@@ -32,6 +32,7 @@ export const PACKAGE_OFFERS: PackageOffer[] = [
     ],
     isPopular: false,
     videoUrl: 'https://ayahaboula.mohamedgooda.com/media/vid1.mp4',
+    posterUrl: '/poster-vid1.jpg',
     shortDescription: 'العرض رقم 1 الخارق: جلسة كافيار + صبغة لون واحد + هدية مجموعة الشامبو والبلسم!'
   },
   {
@@ -49,6 +50,7 @@ export const PACKAGE_OFFERS: PackageOffer[] = [
     ],
     isPopular: true,
     videoUrl: 'https://ayahaboula.mohamedgooda.com/media/vid2.mp4',
+    posterUrl: '/poster-vid2.jpg',
     shortDescription: 'العرض رقم 2 الأقوى: ترتمنت الأرجان المعالج + صبغة فاخرة + مجموعة العناية المتكاملة!'
   }
 ];
