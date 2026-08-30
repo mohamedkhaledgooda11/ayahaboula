@@ -1,0 +1,72 @@
+# ==============================================================================
+# صالون آية هبولة - ملف إعدادات الاستضافة والتوجيه (Hostinger / Apache / LiteSpeed)
+# Aya Haboula Beauty Salon - Production .htaccess for Hostinger
+# ==============================================================================
+
+# 1. ضبط التشفير والترميز الافتراضي على UTF-8
+AddDefaultCharset UTF-8
+
+# 2. تعيين الصفحات الافتراضية
+DirectoryIndex index.html index.php
+
+# 3. منع تصفح المجلدات (Directory Listing)
+Options -Indexes
+
+# 4. تفعيل محرك إعادة التوجيه (Rewrite Engine)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # (أ) إعادة توجيه مسارات API إلى ملف api.php
+    RewriteRule ^api/?$ api.php [QSA,L]
+    RewriteRule ^api/(.*)$ api.php?$1 [QSA,L]
+
+    # (ب) إذا كان الملف أو المجلد موجوداً فعلياً على السيرفر، اعرضه مباشرة
+    # يشمل ذلك: api.php, install.php, test_db.php, مجلد assets/, الصور, الفيديوهات
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # (ج) توجيه جميع المسارات الأخرى (مثل /admin, /thankyou, إلخ) إلى index.html
+    # لدعم تقنية Single Page Application (SPA) بدون خطأ 404
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# 5. حماية الملفات الحساسة من التحميل المباشر عبر المتصفح
+<FilesMatch "^(config\.php|\.env|\.git|package\.json|package-lock\.json|tsconfig\.json|server\.ts|schema\.sql|database\.sql|README.*)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 6. ضبط ترويسات الأمان وضغط الملفات لتسريع التحميل
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# 7. التخزين المؤقت للملفات الثابتة (Browser Caching)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+</IfModule>
