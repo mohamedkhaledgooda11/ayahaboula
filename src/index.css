@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+  }
+}
+
+.lucky-wheel-conic {
+  background: conic-gradient(
+    #FF6600 0deg 36deg,
+    #FFFFFF 36deg 72deg,
+    #FF6600 72deg 108deg,
+    #FFFFFF 108deg 144deg,
+    #FF6600 144deg 180deg,
+    #FFFFFF 180deg 216deg,
+    #FF6600 216deg 252deg,
+    #FFFFFF 252deg 288deg,
+    #FF6600 288deg 324deg,
+    #FFFFFF 324deg 360deg
+  );
+  border: 8px solid #FF6600;
+  border-radius: 50%;
+  box-shadow: 0 10px 25px rgba(255, 102, 0, 0.25);
+}
+
+.offer-card-sleek {
+  border: 2px solid #f1f5f9;
+  transition: all 0.3s ease;
+}
+
+.offer-card-sleek:hover {
+  border-color: #FF6600;
+  transform: translateY(-3px);
+}
+
+@keyframes sleek-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
+.animate-sleek-pulse {
+  animation: sleek-pulse 2s infinite ease-in-out;
+}

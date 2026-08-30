@@ -1,0 +1,6 @@
+{
+  "name": "Beauty Salon Aya Haboula",
+  "description": "منصة وصفحة هبوط عروض وحجوزات بيوتي سنتر آية هبولة مع ساعة الحظ الدوارة ونظام إدارة وحفظ الحجوزات المزدوج",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
